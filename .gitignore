@@ -13,3 +13,12 @@ build/
 轨迹/
 录屏/
 视频/
+
+# 本项目运行产物
+data/
+theater-costume
+
+# 前端构建产物入库（go:embed 编译时需要）
+!web/dist/
+!web/dist/**
+
