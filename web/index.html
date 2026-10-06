@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剧院服装换装路线与场次清点系统</title>
+<style>
+:root{
+  --bg:#14110f; --panel:#1f1a17; --panel2:#27211d; --line:#3a312b;
+  --text:#f0e9e0; --muted:#a89a8c; --gold:#d4a84b; --gold2:#8a6a28;
+  --red:#e05a4e; --red-bg:#3a201d; --amber:#e0a34e; --amber-bg:#3a2e1d;
+  --green:#6fbf7b; --green-bg:#1e3323; --blue:#6ea8d8; --blue-bg:#1c2b3a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:20px;padding:14px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#241d19,#1a1512)}
+header h1{font-size:18px;margin:0;color:var(--gold);font-weight:600;letter-spacing:1px}
+header .sub{color:var(--muted);font-size:13px}
+nav{display:flex;gap:4px;margin-left:auto}
+nav button{background:transparent;border:1px solid transparent;color:var(--muted);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button:hover{color:var(--text)}
+nav button.active{background:var(--panel2);color:var(--gold);border-color:var(--gold2)}
+main{padding:22px 24px;max-width:1280px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+.card h2{font-size:15px;margin:0 0 14px;color:var(--gold);font-weight:600}
+.card h3{font-size:13px;margin:16px 0 8px;color:var(--muted);font-weight:600}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:var(--muted)}
+input,select,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;min-width:120px}
+input:focus,select:focus{outline:none;border-color:var(--gold2)}
+button.btn{background:var(--gold2);border:1px solid var(--gold);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px}
+button.btn:hover{background:#9c7a32}
+button.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
+button.btn.ghost:hover{color:var(--text);border-color:var(--muted)}
+button.btn.danger{background:#5a2620;border-color:var(--red);color:#f3c7c2}
+button.btn.sm{padding:4px 10px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #2c2520;vertical-align:top}
+tr:hover td{background:#221c19}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;white-space:nowrap}
+.badge.available,.badge.returned,.badge.present,.badge.done,.badge.resolved{background:var(--green-bg);color:var(--green);border:1px solid #2f5a39}
+.badge.in_use,.badge.signed{background:var(--blue-bg);color:var(--blue);border:1px solid #2f4a63}
+.badge.laundering,.badge.repairing,.badge.open,.badge.pending{background:var(--amber-bg);color:var(--amber);border:1px solid #5f4a24}
+.badge.missing,.badge.damaged,.badge.cancelled{background:var(--red-bg);color:var(--red);border:1px solid #6b302a}
+.conflict{background:var(--red-bg);border:1px solid #6b302a;border-left:3px solid var(--red);
+  border-radius:6px;padding:8px 12px;margin:6px 0;font-size:12.5px;color:#f0b8b2}
+.conflict.soft{background:var(--amber-bg);border-color:#5f4a24;border-left-color:var(--amber);color:#e8cf9e}
+.conflict .tag{font-weight:600;margin-right:6px}
+.muted{color:var(--muted);font-size:12px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.timeline{position:relative;padding-left:8px}
+.tl-item{display:grid;grid-template-columns:60px 1fr;gap:0;border-left:2px solid var(--line);padding:0 0 4px 18px;position:relative}
+.tl-item::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--gold2);border:2px solid var(--panel)}
+.tl-item.bad::before{background:var(--red)}
+.tl-time{font-size:12px;color:var(--muted);padding-top:10px;font-family:ui-monospace,monospace}
+.tl-body{padding:8px 12px}
+.toast{position:fixed;top:20px;right:20px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.toast div{padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.5);animation:slide .2s}
+.toast .ok{background:var(--green-bg);border:1px solid #2f5a39;color:var(--green)}
+.toast .err{background:var(--red-bg);border:1px solid #6b302a;color:#f0b8b2}
+@keyframes slide{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
+.pill{font-size:11px;padding:1px 7px;border-radius:4px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.stat{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.stat .box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 18px;min-width:110px}
+.stat .n{font-size:22px;color:var(--gold);font-weight:600}
+.stat .l{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>🎭 剧院服装换装路线与场次清点</h1>
+  <span class="sub">{{ show ? show.name + ' · ' + show.performanceDate : '' }}</span>
+  <nav>
+    <button :class="{active:tab==='board'}" @click="tab='board';loadBoard()">场次看板</button>
+    <button :class="{active:tab==='schedule'}" @click="tab='schedule'">换装安排</button>
+    <button :class="{active:tab==='scan'}" @click="tab='scan'">模拟扫码</button>
+    <button :class="{active:tab==='costumes'}" @click="tab='costumes';loadCostumes()">戏服资产</button>
+    <button :class="{active:tab==='care'}" @click="tab='care';loadCare()">洗护维修</button>
+    <button :class="{active:tab==='issues'}" @click="tab='issues';loadIssues()">问题单</button>
+    <button :class="{active:tab==='check'}" @click="tab='check'">散场清点</button>
+  </nav>
+</header>
+
+<div class="toast"><div v-for="t in toasts" :class="t.kind">{{t.msg}}</div></div>
+
+<main>
+<!-- ============ 场次看板 ============ -->
+<template v-if="tab==='board'">
+  <div class="stat" v-if="board">
+    <div class="box"><div class="n">{{board.tasks.length}}</div><div class="l">换装任务</div></div>
+    <div class="box"><div class="n" :style="{color: board.conflicts.length?'var(--red)':'var(--green)'}">{{board.conflicts.length}}</div><div class="l">待处理冲突</div></div>
+    <div class="box"><div class="n">{{board.costumes.filter(c=>c.status==='available').length}}</div><div class="l">可用戏服</div></div>
+    <div class="box"><div class="n" style="color:var(--amber)">{{board.costumes.filter(c=>c.openCare).length}}</div><div class="l">洗护/维修中</div></div>
+    <div class="box"><div class="n" style="color:var(--red)">{{board.costumes.filter(c=>c.openIssue).length}}</div><div class="l">少件/破损</div></div>
+  </div>
+
+  <div class="card">
+    <h2>场次冲突总览</h2>
+    <p v-if="board && !board.conflicts.length" class="muted">✅ 当前排程无冲突（换装路线、转场与清洁间隔均满足）</p>
+    <div v-for="(c,i) in (board?board.conflicts:[])" :key="i" class="conflict" :class="{soft:!c.hard}">
+      <span class="tag">{{ conflictTypeText(c.type) }}</span>{{ c.message }}
+      <span v-if="c.hard" class="badge missing" style="margin-left:8px">硬性·拦截</span>
+      <span v-else class="badge pending" style="margin-left:8px">软性·需确认</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>换装路线（按上场时间）</h2>
+      <div class="timeline">
+        <div v-for="t in (board?board.tasks:[])" :key="t.id" class="tl-item" :class="{bad:t.conflicts.length}">
+          <div class="tl-time">{{fmtHM(t.onAt)}}<br><span class="muted">{{fmtHM(t.offAt)}}</span></div>
+          <div class="tl-body">
+            <div><b>{{t.actorName}}</b> 饰 <span class="pill">{{t.roleName}}</span>
+              <span v-if="t.originalActor && t.originalActor!==t.actorName" class="muted">（临时换角，原定：{{t.originalActor}}）</span>
+              <span v-if="t.signedActor" class="badge signed">签收：{{t.signedActor}}</span>
+              <span class="badge" :class="t.status">{{ taskStatusText(t.status) }}</span>
+            </div>
+            <div style="margin-top:4px">
+              <span class="mono">{{t.costumeCode}}</span> {{t.costumeName}}
+              · <span class="pill">{{t.sceneName}}</span> · 换装点：{{t.changePoint}}
+            </div>
+            <div v-if="t.originalActor===t.actorName && !t.signedActor && t.conflicts.length" style="margin-top:6px">
+              <div v-for="(c,j) in t.conflicts" :key="j" class="conflict" :class="{soft:!c.hard}" style="margin:3px 0">
+                {{c.message}}
+              </div>
+            </div>
+            <div v-if="t.conflictNote" class="muted" style="margin-top:4px">⚠ 强制排程备注：{{t.conflictNote}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>戏服当前位置 / 下一位使用人</h2>
+      <table>
+        <thead><tr><th>编号</th><th>戏服</th><th>状态</th><th>当前位置/持有人</th><th>下一位使用人</th></tr></thead>
+        <tbody>
+          <tr v-for="c in (board?board.costumes:[])" :key="c.id">
+            <td class="mono">{{c.code}}</td>
+            <td>{{c.name}}<div class="muted">换装约{{c.changeSeconds/60}}分钟</div></td>
+            <td><span class="badge" :class="c.status">{{ costumeStatusText(c.status) }}</span>
+              <div v-if="c.openCare" class="badge repairing" style="margin-top:3px">{{c.openCare}}</div>
+              <div v-if="c.openIssue" class="badge missing" style="margin-top:3px">{{c.openIssue}}</div>
+            </td>
+            <td>{{c.location}}<div v-if="c.holderName" class="muted">持有人：{{c.holderName}}</div></td>
+            <td>
+              <template v-if="c.nextOnAt">
+                <b>{{c.nextActor}}</b> 饰 {{c.nextRole}}
+                <div class="muted">{{fmtHM(c.nextOnAt)}} 上场 · {{c.nextChangePoint}}</div>
+              </template>
+              <span v-else class="muted">无后续安排</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<!-- ============ 换装安排 ============ -->
+<template v-if="tab==='schedule'">
+  <div class="card">
+    <h2>安排换装交接点</h2>
+    <div class="row">
+      <div class="field"><label>戏服（实物编号）</label>
+        <select v-model="form.costumeId"><option :value="0">请选择</option>
+          <option v-for="c in costumes" :value="c.id">{{c.code}} {{c.name}}（{{costumeStatusText(c.status)}}）</option></select></div>
+      <div class="field"><label>角色</label>
+        <select v-model="form.roleId"><option :value="0">请选择</option>
+          <option v-for="r in (board?board.roles:[])" :value="r.id">{{r.name}}</option></select></div>
+      <div class="field"><label>演员</label>
+        <select v-model="form.actorId"><option :value="0">请选择</option>
+          <option v-for="a in actors" :value="a.id">{{a.name}}</option></select></div>
+      <div class="field"><label>场次</label>
+        <select v-model="form.sceneId"><option :value="0">请选择</option>
+          <option v-for="s in (board?board.scenes:[])" :value="s.id">{{s.seq}}. {{s.name}}</option></select></div>
+      <div class="field"><label>上场时间</label><input type="datetime-local" v-model="form.onAt"></div>
+      <div class="field"><label>下场时间</label><input type="datetime-local" v-model="form.offAt"></div>
+      <div class="field"><label>换装点</label>
+        <select v-model="form.changePoint"><option>侧台左</option><option>侧台右</option><option>后台</option><option>化妆间</option></select></div>
+      <div class="field"><label>上场顺序</label><input type="number" v-model.number="form.seq" style="width:80px"></div>
+      <button class="btn ghost" @click="preCheck">冲突预检</button>
+      <button class="btn" @click="saveTask(false)">安排</button>
+      <button class="btn danger" @click="saveTask(true)" :disabled="!previewConflicts.length">忽略软性冲突强制安排</button>
+    </div>
+    <div v-for="(c,i) in previewConflicts" :key="'p'+i" class="conflict" :class="{soft:!c.hard}" style="margin-top:10px">
+      <span class="tag">{{ conflictTypeText(c.type) }}</span>{{c.message}}
+      <span v-if="c.hard" class="badge missing" style="margin-left:8px">硬性冲突无法强制保存</span>
+    </div>
+    <p class="muted" style="margin-top:10px">检测规则：演员同时段上场、下场后来不及换装（含换装点间 {{show?show.transferSeconds/60:0}} 分钟转场）、
+      同一件戏服时间重叠、不同角色共用需 {{show?show.cleaningSeconds/60:0}} 分钟清洁间隔；洗护/维修未完成或有未处理少件破损的戏服直接拦截。</p>
+  </div>
+
+  <div class="card">
+    <h2>临时换角（只改未签收任务）</h2>
+    <div class="row">
+      <div class="field"><label>角色</label>
+        <select v-model="recast.roleId"><option :value="0">请选择角色</option>
+          <option v-for="r in (board?board.roles:[])" :value="r.id">{{r.name}}</option></select></div>
+      <div class="field"><label>替换为演员</label>
+        <select v-model="recast.newActorId"><option :value="0">请选择演员</option>
+          <option v-for="a in actors" :value="a.id">{{a.name}}</option></select></div>
+      <button class="btn" @click="doRecast">执行临时换角</button>
+      <span class="muted">已签收/已交回的记录仍关联原演员与实际签收人，不受影响。</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>已排任务</h2>
+    <table>
+      <thead><tr><th>上场</th><th>演员/角色</th><th>戏服</th><th>换装点</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr v-for="t in (board?board.tasks:[])" :key="t.id">
+          <td class="mono">{{fmtHM(t.onAt)}}–{{fmtHM(t.offAt)}}</td>
+          <td>{{t.actorName}} / {{t.roleName}}
+            <div v-if="t.signedActor" class="muted">实际签收：{{t.signedActor}}</div></td>
+          <td><span class="mono">{{t.costumeCode}}</span> {{t.costumeName}}</td>
+          <td>{{t.changePoint}}</td>
+          <td><span class="badge" :class="t.status">{{taskStatusText(t.status)}}</span></td>
+          <td><button v-if="t.status==='pending'" class="btn ghost sm" @click="cancelTask(t.id)">取消</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<!-- ============ 模拟扫码 ============ -->
+<template v-if="tab==='scan'">
+  <div class="grid2">
+    <div class="card">
+      <h2>演员扫码签收</h2>
+      <p class="muted">模拟手持扫描枪：选择待签收任务并扫描戏服条码，签收后任务与演员冻结。</p>
+      <div class="row">
+        <div class="field" style="flex:1"><label>任务</label>
+          <select v-model="scan.signTaskId"><option :value="0">请选择待签收任务</option>
+            <option v-for="t in pendingTasks" :value="t.id" :disabled="t.status!=='pending'">
+              {{fmtHM(t.onAt)}} {{t.actorName}}·{{t.costumeCode}}</option></select></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field" style="flex:1"><label>扫码结果（戏服编号）</label><input v-model="scan.signCode" placeholder="如 C-001"></div>
+        <button class="btn" @click="doSign">📷 扫码签收</button>
+      </div>
+      <h3>签收后交回</h3>
+      <div class="row">
+        <div class="field" style="flex:1"><label>已签收任务</label>
+          <select v-model="scan.returnTaskId"><option :value="0">请选择</option>
+            <option v-for="t in signedTasks" :value="t.id">{{fmtHM(t.onAt)}} {{t.signedActor||t.actorName}}·{{t.costumeCode}}</option></select></div>
+        <div class="field" style="flex:1"><label>扫码结果</label><input v-model="scan.returnCode" placeholder="如 C-001"></div>
+        <button class="btn ghost" @click="doReturn">📷 扫码交回</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>快捷模拟条码</h2>
+      <p class="muted">点击编号即填入上方扫码框：</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button v-for="c in costumes" :key="c.id" class="btn ghost sm" @click="quickCode(c.code)">{{c.code}}</button>
+      </div>
+      <h3>说明</h3>
+      <ul class="muted" style="font-size:12.5px;line-height:1.9;padding-left:18px">
+        <li>条码与任务要求戏服不符会被拒绝；</li>
+        <li>签收瞬间再次检查：有未完成洗护/维修或未处理问题单的戏服不能签收；</li>
+        <li>交回后戏服到服装间等待散场清点。</li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<!-- ============ 戏服资产 ============ -->
+<template v-if="tab==='costumes'">
+  <div class="card">
+    <h2>登记戏服（每件实物一个编号，无库存数量概念）</h2>
+    <div class="row">
+      <div class="field"><label>实物编号/条码</label><input v-model="newC.code" placeholder="C-007"></div>
+      <div class="field"><label>名称</label><input v-model="newC.name" placeholder="如 公主披风"></div>
+      <div class="field"><label>预计换装时间（分钟）</label><input type="number" v-model.number="newC.changeMin"></div>
+      <button class="btn" @click="addCostume">登记</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>戏服清单</h2>
+    <table>
+      <thead><tr><th>编号</th><th>名称</th><th>换装耗时</th><th>状态</th><th>当前位置</th><th>持有人</th></tr></thead>
+      <tbody><tr v-for="c in costumes" :key="c.id">
+        <td class="mono">{{c.code}}</td><td>{{c.name}}</td>
+        <td>{{c.changeSeconds/60}} 分钟</td>
+        <td><span class="badge" :class="c.status">{{costumeStatusText(c.status)}}</span></td>
+        <td>{{c.location}}</td><td>{{holderName(c.holderId)||'—'}}</td>
+      </tr></tbody>
+    </table>
+  </div>
+</template>
+
+<!-- ============ 洗护维修 ============ -->
+<template v-if="tab==='care'">
+  <div class="card">
+    <h2>送洗护 / 送维修</h2>
+    <div class="row">
+      <div class="field"><label>戏服</label>
+        <select v-model="care.costumeId"><option :value="0">请选择</option>
+          <option v-for="c in costumes" :value="c.id">{{c.code}} {{c.name}}</option></select></div>
+      <div class="field"><label>类型</label>
+        <select v-model="care.type"><option value="laundry">洗护</option><option value="repair">维修</option></select></div>
+      <div class="field" style="flex:1"><label>备注</label><input v-model="care.note" placeholder="如 汗渍清洗/裙钩脱落"></div>
+      <button class="btn" @click="startCare">送出</button>
+    </div>
+    <p class="muted">已签收未交回、已有进行中洗护维修、或有未处理问题单的戏服不能送出；完成前该戏服无法被再次分配。</p>
+  </div>
+  <div class="card">
+    <h2>洗护 / 维修记录</h2>
+    <table>
+      <thead><tr><th>戏服</th><th>类型</th><th>状态</th><th>备注</th><th>开始</th><th>完成</th><th>操作</th></tr></thead>
+      <tbody><tr v-for="r in careList" :key="r.id">
+        <td class="mono">{{codeOf(r.costumeId)}}</td>
+        <td>{{r.type==='laundry'?'洗护':'维修'}}</td>
+        <td><span class="badge" :class="r.status">{{r.status==='open'?'进行中':'已完成'}}</span></td>
+        <td>{{r.note||'—'}}</td>
+        <td class="mono">{{fmtDT(r.startedAt)}}</td>
+        <td class="mono">{{r.endedAt?fmtDT(r.endedAt):'—'}}</td>
+        <td><button v-if="r.status==='open'" class="btn sm" @click="finishCare(r.id)">完成并恢复可用</button></td>
+      </tr></tbody>
+    </table>
+  </div>
+</template>
+
+<!-- ============ 问题单 ============ -->
+<template v-if="tab==='issues'">
+  <div class="card">
+    <h2>上报少件 / 破损（必须走处理流程）</h2>
+    <div class="row">
+      <div class="field"><label>戏服</label>
+        <select v-model="issue.costumeId"><option :value="0">请选择</option>
+          <option v-for="c in costumes" :value="c.id">{{c.code}} {{c.name}}</option></select></div>
+      <div class="field"><label>问题类型</label>
+        <select v-model="issue.type"><option value="missing">少件</option><option value="damaged">破损</option></select></div>
+      <div class="field" style="flex:1"><label>情况说明</label><input v-model="issue.note" placeholder="如 第二幕后未交回 / 袖口撕裂"></div>
+      <button class="btn danger" @click="reportIssue">上报</button>
+    </div>
+    <p class="muted">问题单未处理前戏服锁定、无法分配；不能通过“补一个库存数量”消除，必须填写找回/修复经过后结单。</p>
+  </div>
+  <div class="card">
+    <h2>问题单列表</h2>
+    <table>
+      <thead><tr><th>戏服</th><th>类型</th><th>状态</th><th>说明</th><th>上报时间</th><th>处理</th></tr></thead>
+      <tbody><tr v-for="i in issueList" :key="i.id">
+        <td class="mono">{{codeOf(i.costumeId)}}</td>
+        <td><span class="badge" :class="i.type">{{i.type==='missing'?'少件':'破损'}}</span></td>
+        <td><span class="badge" :class="i.status==='open'?'open':'resolved'">{{i.status==='open'?'待处理':'已处理'}}</span></td>
+        <td>{{i.note}}<div v-if="i.resolution" class="muted">处理：{{i.resolution}}</div></td>
+        <td class="mono">{{fmtDT(i.reportedAt)}}</td>
+        <td>
+          <template v-if="i.status==='open'">
+            <input v-model="i._resolution" placeholder="找回/修复经过" style="min-width:180px">
+            <button class="btn sm" @click="resolveIssue(i)">结单</button>
+          </template>
+          <span v-else class="muted">{{fmtDT(i.resolvedAt)}}</span>
+        </td>
+      </tr></tbody>
+    </table>
+  </div>
+</template>
+
+<!-- ============ 散场清点 ============ -->
+<template v-if="tab==='check'">
+  <div class="card">
+    <h2>散场逐件清点</h2>
+    <div class="row">
+      <button class="btn" @click="startCheck">开始新清点单（《{{show?show.name:''}}》）</button>
+      <span v-if="checkSession" class="muted">清点单 #{{checkSession.session.id}} · {{fmtDT(checkSession.session.createdAt)}}</span>
+    </div>
+    <table v-if="checkSession" style="margin-top:14px">
+      <thead><tr><th>编号</th><th>戏服</th><th>清点结果</th><th>备注</th><th>登记</th></tr></thead>
+      <tbody><tr v-for="it in checkSession.items" :key="it.id">
+        <td class="mono">{{it.costumeCode}}</td><td>{{it.costumeName}}</td>
+        <td><span class="badge" :class="it.state">{{checkStateText(it.state)}}</span></td>
+        <td><input v-model="it._note" :value="it.note" style="min-width:200px" placeholder="异常情况说明"></td>
+        <td>
+          <button class="btn ghost sm" @click="recordCheck(it,'present')">在场</button>
+          <button class="btn danger sm" @click="recordCheck(it,'missing')">少件</button>
+          <button class="btn danger sm" @click="recordCheck(it,'damaged')">破损</button>
+        </td>
+      </tr></tbody>
+    </table>
+    <p class="muted">标记少件/破损会立即生成未决问题单并锁定该戏服，直到按问题处理流程结单。</p>
+  </div>
+</template>
+</main>
+</div>
+
+<script src="/vendor/vue.global.prod.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
